@@ -3,15 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Find New Recipes</title>
+    <title>Munchers Recipe Finder</title>
     <link href="{{url_for('static', filename='styles/style.css')}}" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
-<body class="home">
-    <h1>Please enter your main ingredient:</h1>
-    <form action="/recipes" autocomplete="off">
-        <input type="text" name="ingredient" id="ingredient" placeholder="Input main ingredient..." autocomplete="off" autocorrect="off" spellcheck="false"/>
-        <button type="submit">Submit</button>
-    </form>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Recipe Tile Component
+        function RecipeTile({ recipe, onClick }) {
+            return (
+                <div className="recipe-tile" onClick={() => onClick(recipe.id)}>
+                    <img src={recipe.image} alt={recipe.name} />
+                    <h3>{recipe.name}</h3>
+                </div>
+            );
+        }
+
+        // Recipe Detail Component
+        function RecipeDetail({ recipeId, onBack }) {
+            const [recipe, setRecipe] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+
+            useEffect(() => {
+                fetch(`/api/recipes/${recipeId}`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Recipe not found');
+                        return response.json();
+                    })
+                    .then(data => {
+                        setRecipe(data);
+                        setLoading(false);
+                    })
+                    .catch(err => {
+                        setError(err.message);
+                        setLoading(false);
+                    });
+            }, [recipeId]);
+
+            if (loading) return <div className="loading">Loading recipe details...</div>;
+            if (error) return <div className="error">Error: {error}</div>;
+            if (!recipe) return null;
+
+            // Extract YouTube video ID from URL
+            const getYouTubeId = (url) => {
+                if (!url) return null;
+                const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+                return match ? match[1] : null;
+            };
+
+            const youtubeId = getYouTubeId(recipe.youtube);
+
+            return (
+                <div className="recipe-detail">
+                    <button className="back-button" onClick={onBack}>← Back to Results</button>
+                    
+                    <h1>{recipe.name}</h1>
+                    
+                    <div className="recipe-meta">
+                        {recipe.category && <span className="badge">Category: {recipe.category}</span>}
+                        {recipe.area && <span className="badge">Cuisine: {recipe.area}</span>}
+                    </div>
+
+                    <img src={recipe.image} alt={recipe.name} className="recipe-detail-image" />
+                    
+                    <div className="recipe-instructions">
+                        <h2>Instructions</h2>
+                        <p>{recipe.instructions}</p>
+                    </div>
+
+                    {youtubeId && (
+                        <div className="youtube-container">
+                            <h2>Video Tutorial</h2>
+                            <iframe
+                                width="100%"
+                                height="500"
+                                src={`https://www.youtube.com/embed/${youtubeId}`}
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                title={recipe.name}
+                            ></iframe>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Main App Component
+        function App() {
+            const [view, setView] = useState('search'); // 'search', 'results', 'detail'
+            const [ingredient, setIngredient] = useState('');
+            const [recipes, setRecipes] = useState([]);
+            const [selectedRecipeId, setSelectedRecipeId] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+
+            const handleSearch = async (e) => {
+                e.preventDefault();
+                
+                if (!ingredient.trim()) {
+                    setError('Please enter an ingredient');
+                    return;
+                }
+
+                setLoading(true);
+                setError(null);
+
+                try {
+                    const response = await fetch(`/api/recipes/search?ingredient=${encodeURIComponent(ingredient)}`);
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to fetch recipes');
+                    }
+
+                    const data = await response.json();
+                    setRecipes(data.recipes);
+                    setView('results');
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleRecipeClick = (recipeId) => {
+                setSelectedRecipeId(recipeId);
+                setView('detail');
+            };
+
+            const handleBackToResults = () => {
+                setView('results');
+                setSelectedRecipeId(null);
+            };
+
+            const handleNewSearch = () => {
+                setView('search');
+                setIngredient('');
+                setRecipes([]);
+                setError(null);
+            };
+
+            return (
+                <div className="app-container">
+                    {view === 'search' && (
+                        <div className="search-view">
+                            <h1>Please enter your main ingredient:</h1>
+                            <form onSubmit={handleSearch}>
+                                <input
+                                    type="text"
+                                    value={ingredient}
+                                    onChange={(e) => setIngredient(e.target.value)}
+                                    placeholder="Input main ingredient..."
+                                    autoComplete="off"
+                                    autoCorrect="off"
+                                    spellCheck="false"
+                                />
+                                <button type="submit" disabled={loading}>
+                                    {loading ? 'Searching...' : 'Submit'}
+                                </button>
+                            </form>
+                            {error && <div className="error-message">{error}</div>}
+                        </div>
+                    )}
+
+                    {view === 'results' && (
+                        <div className="results-view">
+                            <div className="results-header">
+                                <h1>Recipes with {ingredient}</h1>
+                                <button onClick={handleNewSearch} className="new-search-button">
+                                    New Search
+                                </button>
+                            </div>
+                            
+                            <div className="recipe-grid">
+                                {recipes.map(recipe => (
+                                    <RecipeTile
+                                        key={recipe.id}
+                                        recipe={recipe}
+                                        onClick={handleRecipeClick}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {view === 'detail' && (
+                        <RecipeDetail
+                            recipeId={selectedRecipeId}
+                            onBack={handleBackToResults}
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
