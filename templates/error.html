@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>No Recipes Found</title>
+    <link href="{{url_for('static', filename='styles/style.css')}}" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="info_page">
+    <h1>No recipes with that ingredient were found</h1>
+    <img src="/static/images/sadface.png" alt="Sad Face" height="500" width="500">
+    <form action="/recipes" autocomplete="off">
+        <input type="text" name="ingredient" id="ingredient" placeholder="Input main ingredient..." autocomplete="off" autocorrect="off" spellcheck="false" style="margin-right: 0.5rem;"/>
+        <button type="submit">Submit</button>
+    </form>
+</body>
+</html>
