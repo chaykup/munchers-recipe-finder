@@ -75,10 +75,29 @@ if __name__ == "__main__":
     
     ingredient = input('\nPlease provide an ingredient you have in your kitchen: ')
 
-    recipes = get_recipe_ids_by_ingredient(ingredient)
-
-    print("\n")
+    # Get recipes with basic info (id, name, image)
+    recipes = get_recipes_with_basic_info(ingredient)
 
     if recipes:
+        print("\n--- Available Recipes ---\n")
+        # Display recipes in JSON-like format with id and name
         for recipe in recipes:
-            pprint(get_details_by_id(recipe))
+            print(f"ID: {recipe['id']} - {recipe['name']}")
+        
+        print("\n")
+        
+        # Prompt user to select a recipe ID
+        recipe_id = input("Enter the recipe ID to see full details (or press Enter to exit): ").strip()
+        
+        if recipe_id:
+            # Get and display full details for selected recipe
+            details = get_details_by_id(recipe_id)
+            if details:
+                print("\n--- Recipe Details ---\n")
+                pprint(details)
+            else:
+                print(f"\nError: Could not find recipe with ID {recipe_id}")
+        else:
+            print("\nExiting...")
+    else:
+        print(f"\nNo recipes found with ingredient: {ingredient}")
